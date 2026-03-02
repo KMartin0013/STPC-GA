@@ -6,7 +6,7 @@ By reconciling two eigenvalue problems in spherical Slepian method and Multichan
 ## Notice before use
 1. The Slepian procedure of this code is based on the [foundational Software from the Simons Laboratories](https://geoweb.princeton.edu/people/simons/software.html), and [its add-on version](https://github.com/KMartin0013/Slepian_ocean_add-on) for ocean application (e.g., GAD, GIA, IB correction).
 2. It is strongly recommended to familiarize yourself with the foundational work by <a href="https://polarice.geo.arizona.edu/">C. Harig</a> &amp; <a href="http://www.frederik.net">F. J. Simons</a> ([Ref 1](https://doi.org/10.1073/pnas.1206785109)), and our previous work on ocean ([Ref 2](https://doi.org/10.1016/j.jag.2024.104065)) before using this add-on code.
-3. **As the code has not yet been fully optimised, it is advisable to reserve 5–8GB of space before running each case.** 
+3. **As the code has not yet been fully optimised, it is advisable to reserve 5–8GB of space (for ocean cases maybe double the space) before running each case.** 
 
 
 **Required software:**<br>
