@@ -1,4 +1,4 @@
-# STPC_Lite (Version 2)
+# STPC_GA (Version 2)
 A Lite version of Spatio-Temporal Principal Component (STPC) filter for basin-scale hydrological, cryospheric and oceanographic applications of GRACE/GRACE-FO.  
 
 By reconciling two eigenvalue problems in spherical Slepian method and Multichannel Singular Spectrum Analysis (MSSA) based on different noise significance levels, the STPC filter establishes a statistical framework for basin-scale analyses via automatically determined, region-specific physical parameters governing spatio-temporal localization, leakage-in/out effects differentiation, uncertainty minimization across data centers, and mitigation of north-south striping.
