@@ -2,7 +2,7 @@ function varargout = MSSA_gap_fitting_only_correct(A5_CJGI_Sort,M,N,fig_note)
 % MSSA usage for multiple institutions
 %[MSSAn_Total_CGJI_EST_reconst,MSSAn_RC,iter_num,chi,RCtest]=MSSA_gap_fitting(A5_CJGI_Sort,M,Mnum,fig_note);
 
-addpath(fullfile(getenv('IFILES'),'MSSA'))
+addpath(fileparts(mfilename('fullpath')))
 % M=numel(tt_EST)/2;
 Method=2;
 % Mnum=8;                    % we want 8 RC
@@ -79,7 +79,7 @@ for i=1:intit_num
         Cap_posix1=tt_use(5);Cap_posiy1=ybou1(2)-(ybou1(2)-ybou1(1))/10;
         Cap_posix2=tt_use(5);Cap_posiy2=ybou2(2)-(ybou2(2)-ybou2(1))/10;
 
-        % plot the standard deviations of mean values for four institutions
+        % plot the standard deviations of mean values for the active centers
         baseline=ybou1(2);
 
         he_std=area(tt_fil,[MSSA1_CJGIave-3*std_MSSA1 6*std_MSSA1*ones(numel(tt_fil),1)],baseline);
@@ -154,7 +154,7 @@ for i=1:intit_num
         if ischar(A5_CJGI_Sort(i).MSSA_TS_order)
             title([A5_CJGI_Sort(i).name(1:end-4) ' inverted barometer'],'FontWeight','bold')
         else
-            title([A5_CJGI_Sort(i).name(1:end-4) ' spherical slepian coefficient (\alpha = ' num2str(A5_CJGI_Sort(i).MSSA_TS_order) ')'],'FontWeight','bold')
+            title([A5_CJGI_Sort(i).name(1:end-4) ' spherical Slepian coefficient (\alpha = ' num2str(A5_CJGI_Sort(i).MSSA_TS_order) ')'],'FontWeight','bold')
         end
 %         title(['Slepian expansion coefficient (' A5_CJGI_Sort(i).name(1:end-4) ')'],'FontWeight','bold')
 
@@ -178,7 +178,7 @@ end
 if fig
 
     if exist('he_out','var')
-        l1=legend([p1,p2,p3,he_gap,he_out],{'Raw data','Fit data','1st M-SSA average', ...
+        l1=legend([p1,p2,p3,he_gap,he_out],{'Raw data','Fit data','1st MSSA average', ...
             'GRACE gaps','Outliers'},'NumColumns',5)
     else
         l1=legend([p1,p2,p3,he_gap],{'Raw data','Fit data','1st M-SSA data','GRACE gaps',},'NumColumns',4)
@@ -378,11 +378,11 @@ if fig
         ylim(ybou1)
         xticks(floor(tt_fil(1)):1:floor(tt_fil(end)))
         set(gca, 'xticklabel', get(gca, 'xtick'),'FontSize',font_Size-2)
-
+        ylabel('cm')
         if ischar(A5_CJGI_Sort(i).MSSA_TS_order)
             title([A5_CJGI_Sort(i).name(1:end-4) ' inverted barometer'],'FontWeight','bold')
         else
-            title([A5_CJGI_Sort(i).name(1:end-4) ' spherical slepian coefficient (\alpha = ' num2str(A5_CJGI_Sort(i).MSSA_TS_order) ')'],'FontWeight','bold')
+            title([A5_CJGI_Sort(i).name(1:end-4) ' spherical Slepian coefficient (\alpha = ' num2str(A5_CJGI_Sort(i).MSSA_TS_order) ')'],'FontWeight','bold')
         end
 %         title(['Slepian expansion coefficient (' A5_CJGI_Sort(i).name(1:end-4) ')'],'FontWeight','bold')
 

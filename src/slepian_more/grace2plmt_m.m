@@ -138,6 +138,10 @@ else
     end
 
     % DATA CENTER
+    datanames_D = {};
+    Ldata_D = Ldata;
+    ddir1_D = ddir1;
+
 
     if strcmp(Pcenters,'GFZ')
         if strcmp(Rlevel,'RL04')
@@ -247,6 +251,36 @@ else
         end
         % Know a priori what the bandwidth of the coefficients is
         %    Ldata=90;
+    elseif  strcmp(Pcenters,'COSTG')
+        if strcmp(Rlevel,'RL06')
+            if Ldata > 90
+                error(['COSTG RL06 files currently stored here are degree 90; requested L=' num2str(Ldata)]);
+            end
+            datanames=ls2cell(fullfile(ddir1,'GSM-2_*COSTG*.gfc'));
+            if isempty(datanames)
+                error('No COSTG .gfc files were found. Expected files such as GSM-2_*COSTG*.gfc.');
+            end
+            ddir1_D=fullfile(getenv('IFILES'),'GRACE','Originals',Rlevel,'ITSG0324');
+            datanames_D=ls2cell(fullfile(ddir1_D,'model_oceanBottom*'));
+            Ldata_D=180;
+        else
+            error('COSTG support is currently implemented for RL06 only.');
+        end
+    elseif  strcmp(Pcenters,'Tongji')
+        if strcmp(Rlevel,'RL06')
+            if Ldata > 60
+                error(['Tongji0323 files currently stored here are degree 60; requested L=' num2str(Ldata)]);
+            end
+            datanames=ls2cell(fullfile(ddir1,'Tongji-Grace2022_n60_*.gfc'));
+            if isempty(datanames)
+                error('No Tongji .gfc files were found. Expected files such as Tongji-Grace2022_n60_YYYY-MM.gfc.');
+            end
+            ddir1_D=fullfile(getenv('IFILES'),'GRACE','Originals',Rlevel,'ITSG0324');
+            datanames_D=ls2cell(fullfile(ddir1_D,'model_oceanBottom*'));
+            Ldata_D=180;
+        else
+            error('Tongji support is currently implemented for RL06 only.');
+        end
     elseif  strcmp(Pcenters,'GRGS')
         if strcmp(Rlevel,'RL05')
             %GRGS only has TSVD_0005, here only 90 degrees are considered
@@ -362,7 +396,7 @@ else
         % load geopotential coefficients
         fname1=fullfile(ddir1,datanames{index});
 
-        if strcmp(Pcenters,'ITSG')
+        if strcmp(Pcenters,'ITSG') || strcmp(Pcenters,'COSTG') || strcmp(Pcenters,'Tongji')
 
             % Open and scan the file (data from ITSG is 7 columns)
             fid = fopen(fname1);
@@ -391,6 +425,9 @@ else
         % Only want columns 2-7, and as format double
         Carray = Carray(:,2:7);
         lmcosi_month=cellfun(@str2num,Carray);
+        if strcmp(Pcenters,'COSTG') || strcmp(Pcenters,'Tongji')
+            lmcosi_month = lmcosi_month(lmcosi_month(:,1) <= Ldata, :);
+        end
         % This should be addmup(Ldata)
         [m,n] = size(lmcosi_month);
 
@@ -419,7 +456,7 @@ else
                     lmcosiE(ldim+1:end,1:2) zeros(length(lmcosiE)-ldim,4)];
             end
 
-        elseif strcmp(Pcenters,'GRGS') || strcmp(Pcenters,'ITSG')
+        elseif strcmp(Pcenters,'GRGS') || strcmp(Pcenters,'ITSG') || strcmp(Pcenters,'COSTG') || strcmp(Pcenters,'Tongji')
             % The GRGS and ITSG coefficients are in the order we want already
             ldim=length(lmcosi_month);
         else
@@ -433,6 +470,28 @@ else
             monthend = datenum([str2num(datanames{index}(end-10:end-7))+floor(str2num(datanames{index}(end-5:end-4))/12) ...
                 mod(str2num(datanames{index}(end-5:end-4)),12)+1 1])-1;
             monthmid = (monthstart+monthend)/2;
+            thedates(index) = monthmid;
+
+        elseif strcmp(Pcenters,'COSTG')
+            dateToken = regexp(datanames{index}, 'GSM-2_(\d{4})(\d{3})-(\d{4})(\d{3})', 'tokens', 'once');
+            if isempty(dateToken)
+                error(['Cannot parse COSTG date from file name: ' datanames{index}]);
+            end
+            monthstart = datenum(str2double(dateToken{1}), 1, str2double(dateToken{2}));
+            monthend = datenum(str2double(dateToken{3}), 1, str2double(dateToken{4}));
+            monthmid = (monthstart + monthend) / 2;
+            thedates(index) = monthmid;
+
+        elseif strcmp(Pcenters,'Tongji')
+            dateToken = regexp(datanames{index}, '_(\d{4})-(\d{2})\.gfc$', 'tokens', 'once');
+            if isempty(dateToken)
+                error(['Cannot parse Tongji date from file name: ' datanames{index}]);
+            end
+            yearNum = str2double(dateToken{1});
+            monthNum = str2double(dateToken{2});
+            monthstart = datenum(yearNum, monthNum, 1);
+            monthend = datenum(yearNum + floor(monthNum/12), mod(monthNum,12) + 1, 1) - 1;
+            monthmid = (monthstart + monthend) / 2;
             thedates(index) = monthmid;
 
         else
@@ -523,15 +582,22 @@ else
 
         if strcmp(land_or_ocean,'ocean')
 
+            if isempty(datanames_D)
+                error(['No atmosphere/ocean background product is available for ' Pcenters '. COSTG/Tongji have no own GAD/GAC files; check ITSG0324 model_oceanBottom files for ocean cases.']);
+            end
+
+            if strcmp(Pcenters,'COSTG') || strcmp(Pcenters,'Tongji')
+                disp(['Ocean case for ' Pcenters ': using ITSG model_oceanBottom files for GAD-style restore.']);
+            end
             where2=0;
 
-            while ~where2 & index_D<=length(datanames_D)
+            while ~where2 && index_D < length(datanames_D)
                 index_D=index_D+1;
 
                 % load geopotential coefficients of GAD
-                fname3=fullfile(ddir1,datanames_D{index_D});
+                fname3=fullfile(ddir1_D,datanames_D{index_D});
 
-                if  strcmp(Pcenters,'ITSG')
+                if  strcmp(Pcenters,'ITSG') || strcmp(Pcenters,'COSTG') || strcmp(Pcenters,'Tongji')
                     % Calculate the midpoint of this data span
                     monthstart_D = datenum([str2num(datanames_D{index_D}(end-10:end-7)) ...
                         str2num(datanames_D{index_D}(end-5:end-4)) 1]);
@@ -566,7 +632,7 @@ else
                 error('No GAD (or GAB) product to corresponding GSM.')
             else
 
-                if  strcmp(Pcenters,'ITSG')
+                if  strcmp(Pcenters,'ITSG') || strcmp(Pcenters,'COSTG') || strcmp(Pcenters,'Tongji')
                     % Open and scan the file (data from ITSG is 5 columns)
                     fid = fopen(fname3);
                     C = textscan(fid,'%s%s%s%s%s');
@@ -629,7 +695,7 @@ else
                         lmcosi_month_D = [lmcosi_month_D;...
                             lmcosiE(ldim+1:end,1:2) zeros(length(lmcosiE)-ldim,4)];
                     end
-                elseif strcmp(Pcenters,'GRGS') || strcmp(Pcenters,'ITSG')
+                elseif strcmp(Pcenters,'GRGS') || strcmp(Pcenters,'ITSG') || strcmp(Pcenters,'COSTG') || strcmp(Pcenters,'Tongji')
                     % The GRGS and ITSG coefficients are in the order we want already;
                     ldim=length(lmcosi_month_D);
                 else

@@ -1,4 +1,4 @@
-function buffer_deg=det_opt_bufferzone(basicInfo, slepianInfo);
+function buffer_deg=det_opt_buffer(basicInfo, slepianInfo);
 
 arguments
     basicInfo   struct
@@ -55,9 +55,14 @@ elseif strcmp(land_or_ocean,'ice')
 
 end
 
-MOD_S_choice    = 1; % here we choose V > 0.1
+MOD_S_selection = struct('mode', 'eigen_threshold', ...
+    'value', [], 'threshold', 0.1, 'radius', []);
 
-ddir3=fullfile(ddir1,'Simulate');
+if isfield(basicInfo, 'sharedResultDir')
+    ddir3 = fullfile(basicInfo.sharedResultDir, 'Simulate');
+else
+    ddir3 = fullfile(ddir1, 'Simulate');
+end
 if exist(ddir3, 'dir') ~= 7
     mkdir(ddir3);
 end
@@ -66,13 +71,37 @@ group_buffer_num=numel(group_buffer);
 [Dataproduct, FIG_Attach_Mod] = MOD_build_name_tags_and_ib_path( ...
     ii, oo, rr, Area, Lwindow);
 
-if ~redo && exist(fullfile(ddir3,['Sig_' FIG_Attach_Mod '.mat']), 'file')
+simulationFile = fullfile(ddir3, ['Sig_' FIG_Attach_Mod '.mat']);
+simulationMetadata = struct( ...
+    'schema_version', 'V3-simulation-1', ...
+    'TH_ori', TH_ori, ...
+    'Area', Area, ...
+    'land_or_ocean', land_or_ocean, ...
+    'Lwindow', Lwindow, ...
+    'Max_S', Max_S, ...
+    'group_buffer', group_buffer, ...
+    'c11cmn', c11cmn, ...
+    'Radius', Radius, ...
+    'complete', true);
+reuseSimulation = false;
+if ~redo && exist(simulationFile, 'file')
+    cachedSimulation = load(simulationFile, ...
+        'group_buffer_results', 'simulationMetadata');
+    reuseSimulation = isfield(cachedSimulation, 'group_buffer_results') && ...
+        isfield(cachedSimulation, 'simulationMetadata') && ...
+        isequaln(cachedSimulation.simulationMetadata, simulationMetadata);
+end
 
-    disp(['Slepian: Loading existing ',fullfile(ddir3,['Sig_' FIG_Attach_Mod '.mat']) ...
-        ' for plotting.']);
-    load(fullfile(ddir3,['Sig_' FIG_Attach_Mod '.mat']),"group_buffer_results");
-
+if reuseSimulation
+    disp(['Slepian: Loading compatible shared simulation ', ...
+        simulationFile, ' for plotting.']);
+    group_buffer_results = cachedSimulation.group_buffer_results;
 else
+    if ~redo && exist(simulationFile, 'file')
+        warning('V3:SharedSimulationMismatch', ...
+            ['The shared simulation cache is incompatible with the current ', ...
+             'region/groupBuffer settings and will be recomputed.']);
+    end
 
     disp('This process may take a while. Please wait and enjoy a cup of coffee.')
 
@@ -118,7 +147,7 @@ else
         mod_nmonths=numel(mod_dates);
         mod_months=1:numel(mod_dates);
 
-        [S_shannon, S, S_sig] = choose_S_from_eigenvalues(MOD_S_choice, ...
+        [S_shannon, S, S_sig] = choose_S_from_eigenvalues(MOD_S_selection, ...
             Max_S, V, Lwindow, XY_buffer);
 
         mod_MASS_SS=zeros(S,length(mod_dates));
@@ -280,15 +309,17 @@ else
         group_buffer_results(ll).mod_Grid_EWH_rms = mod_Grid_EWH_rms;
         group_buffer_results(ll).Coeff      = Coeff;
 
-        save(fullfile(ddir3,['Sig_' FIG_Attach_Mod]),"group_buffer_results")
+        simulationMetadata.complete = false;
+        save(simulationFile, 'group_buffer_results', 'simulationMetadata')
+        simulationMetadata.complete = true;
 
     end
+    save(simulationFile, 'group_buffer_results', 'simulationMetadata')
 
 end
 %% load useful plotting variables
 
-fn1=fullfile(ifilesRoot, 'src','MOD');
-run(fullfile(fn1,'Coeff_make.m')) % Coeffin and Coeffout
+run(fullfile(stpc_source_root(), 'MOD', 'Coeff_make.m')) % Coeffin and Coeffout
 
 mod_dates       = group_buffer_results(1).mod_dates;
 mod_nmonths     = numel(mod_dates);
@@ -356,6 +387,9 @@ end
 
 [Max_pcc,I_pcc] = max(buffer_pcc);
 [Max_rmse,I_rmse] = min(buffer_rmse);
+bufferDecision = buffer_selection_diagnostics(group_buffer, buffer_pcc, ...
+    buffer_rmse, line_tre_n1, line_amp_n1, line_pha_n1, ...
+    True_trend, True_amp, True_pha, I_pcc, I_rmse);
 
 %% plot
 lon_matl = c11cmn(1)-0.5 : c11cmn(3)-0.5;
@@ -424,7 +458,7 @@ if strcmp(land_or_ocean,'ocean')
         hold on
 
         % this is too empirical, so the buffer contour and study area my be
-        % separated with 360°
+        % separated with 360?
         if XY_buf{ll}(1,1)>180
             m_line(XY_buf{ll}(:,1)-360, XY_buf{ll}(:,2),'LineStyle','--',...
                 'Color',colorr_blind(ll,:),'linewidth',1);
@@ -547,7 +581,7 @@ elseif strcmp(land_or_ocean,'land')
         hold on
 
         % this is too empirical, so the buffer contour and study area my be
-        % separated with 360°
+        % separated with 360?
         if XY_buf{ll}(1,1)>180
             l1(ll)=m_line(XY_buf{ll}(:,1)-360, XY_buf{ll}(:,2),'LineStyle','--',...
                 'Color',colorr_blind(ll,:),'linewidth',1);
@@ -589,7 +623,7 @@ elseif strcmp(land_or_ocean,'ice')
         hold on
         %     p1(ll).FaceAlpha=0.3;
         % this is too empirical, so the buffer contour and study area my be
-        % separated with 360°
+        % separated with 360?
         if XY_buf{ll}(1,1)>180
             m_line(XY_buf{ll}(:,1)-360, XY_buf{ll}(:,2),'LineStyle','--',...
                 'Color',colorr_blind(ll,:),'linewidth',1);
@@ -642,7 +676,7 @@ m_line(XY_ori(:,1), XY_ori(:,2),'LineStyle','-',...
 
 hold on
 % this is too empirical, so the buffer contour and study area my be
-% separated with 360°
+% separated with 360?
 if XY_buf_sub(1,1)>180
     m_line(XY_buf_sub(:,1)-360, XY_buf_sub(:,2),'LineStyle','--',...
         'Color','k','linewidth',1);
@@ -683,7 +717,7 @@ cb.Position = [0.94 0.69 0.02 0.26];
 title(cb,'RMS','fontsize',14);
 
 % this is too empirical, so the buffer contour and study area my be
-% separated with 360°
+% separated with 360?
 if XY_buf_sub(1,1)>180
     m_line(XY_buf_sub(:,1)-360, XY_buf_sub(:,2),'LineStyle','--',...
         'Color','k','linewidth',1);
@@ -824,35 +858,55 @@ print(f2, '-dtiff', '-r500', fullfile(ddir2, tif_name));
 if redo || ~exist(fullfile(ddir1,'MainSlep_Optimal_Buffer.mat'), 'file')
 
     if I_pcc==I_rmse
-
-        disp(['Based on PCC and RMSE, the optimal buffer zone is: ', num2str(group_buffer(I_rmse)) char(176)]);
-        agr_flag=input('Do you agree? Y/N [Y]: ',"s");
-
-        if strcmp(agr_flag, 'Y')
-            buffer_deg=group_buffer(I_rmse);
-        else
-            error('You could define the buffer zone in advance.')
-        end
+        buffer_deg = group_buffer(I_rmse);
+        buffer_selection_source = 'pcc_rmse_agreement';
+        disp(['PCC and RMSE agree. The optimal buffer zone is: ', ...
+            num2str(buffer_deg) char(176), '. Continue automatically.']);
 
     else
-        disp(['Based on the rmse, the optimal buffer zone is: ', num2str(group_buffer(I_rmse)) char(176)]);
-        disp(['Based on the pcc, the optimal buffer zone is: ', num2str(group_buffer(I_pcc)) char(176)]);
-        agr_flag=input(['Type ''1'' to agree rmse results (recommended) and preceed, ',...
-            'or ''2'' to agree pcc results and preceed, or any other key to desagree and return.\n1/2 [1]: '],"s");
+        disp('PCC and RMSE select different buffer zones.');
+        disp(['PCC-best buffer: ', num2str(group_buffer(I_pcc)), ...
+            char(176), '; RMSE-best buffer: ', ...
+            num2str(group_buffer(I_rmse)), char(176), '.']);
+        disp('Buffer comparison (estimated value, true value, and absolute error):');
+        disp(bufferDecision.table);
+        disp(bufferDecision.reason);
 
-        if strcmp(agr_flag, '1')
-            buffer_deg=group_buffer(I_rmse);
-        elseif strcmp(agr_flag, '2')
-            buffer_deg=group_buffer(I_pcc);
+        defaultChoice = num2str(bufferDecision.auto_index);
+        promptText = sprintf([ ...
+            'Select any candidate number shown in the table above.\n' ...
+            'If no valid input is received within 30 seconds, candidate %s ' ...
+            '(buffer %.6g deg) will be selected automatically.\n' ...
+            'Candidate [%s]: '], defaultChoice, ...
+            bufferDecision.auto_buffer_deg, defaultChoice);
+        [candidateAnswer, usedDefault] = timed_buffer_input( ...
+            promptText, defaultChoice, 30);
+        selectedIndex = str2double(candidateAnswer);
+
+        if isfinite(selectedIndex) && selectedIndex == fix(selectedIndex) && ...
+                ismember(selectedIndex, 1:numel(group_buffer))
+            buffer_deg = group_buffer(selectedIndex);
+            if usedDefault
+                buffer_selection_source = 'secondary_metrics_timeout_auto';
+            else
+                buffer_selection_source = 'user_candidate_selection';
+            end
         else
-            error('You could define the buffer zone in advance.')
+            error(['Invalid buffer candidate "%s". Run again and enter an ' ...
+                'integer candidate number from 1 to %d.'], ...
+                candidateAnswer, numel(group_buffer));
         end
-
     end
 
     close all
 
-    save(fullfile(ddir1,'MainSlep_Optimal_Buffer.mat'),'buffer_deg','buffer_pcc','buffer_rmse');
+    buffer_selection_diagnostics_table = bufferDecision.table;
+    buffer_auto_choice_deg = bufferDecision.auto_buffer_deg;
+    buffer_selection_reason = bufferDecision.reason;
+    save(fullfile(ddir1,'MainSlep_Optimal_Buffer.mat'), ...
+        'buffer_deg', 'buffer_pcc', 'buffer_rmse', ...
+        'buffer_selection_diagnostics_table', 'buffer_auto_choice_deg', ...
+        'buffer_selection_reason', 'buffer_selection_source');
 
 else
 
@@ -861,11 +915,45 @@ else
    
     load(fullfile(ddir1,'MainSlep_Optimal_Buffer.mat'),"buffer_deg");
 
-    disp(['Your selected buffer zone: ' num2str(num2str(group_buffer(I_rmse))) char(176) ])
+    disp(['Your selected buffer zone: ' num2str(buffer_deg) char(176) ])
     
     pause(1)
     
     close all
 end
 %%
+end
+
+function [answer, usedDefault] = timed_buffer_input( ...
+        promptText, defaultAnswer, timeoutSeconds)
+    answer = '';
+    usedDefault = false;
+    fprintf('%s', promptText);
+    fprintf('Waiting %d seconds; default is "%s".\n', timeoutSeconds, defaultAnswer);
+
+    if usejava('jvm')
+        try
+            inputReader = javaObject('java.io.InputStreamReader', java.lang.System.in);
+            bufferedReader = javaObject('java.io.BufferedReader', inputReader);
+            waitTimer = tic;
+            while toc(waitTimer) < timeoutSeconds
+                if bufferedReader.ready()
+                    answer = strtrim(char(bufferedReader.readLine()));
+                    break
+                end
+                pause(0.2);
+            end
+        catch
+            pause(timeoutSeconds);
+        end
+    else
+        pause(timeoutSeconds);
+    end
+
+    if isempty(answer)
+        answer = defaultAnswer;
+        usedDefault = true;
+        fprintf('No input received in %d seconds. Use default "%s".\n', ...
+            timeoutSeconds, defaultAnswer);
+    end
 end

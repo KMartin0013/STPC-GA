@@ -1,4 +1,4 @@
-function [slepcoff_gapfilling, iternum_gapfilling] = run_mssa_gap_filling(mssaSort, S, S_ol, ...
+function [slepcoff_gapfilling, iternum_gapfilling] = run_gapfilling(mssaSort, S, S_ol, ...
     mssaInfo, Attach, doPlot);
 
 intit_num   = mssaInfo.intit_num;
@@ -84,17 +84,18 @@ for ss=1:S_ol
         % 3 sigma
         if doPlot
 
-            if mod(ss-1,5)==0
+%             if mod(ss-1,5)==0
                 
                 [MSSAn_CGJI_fill_reconst,~,iter_num,chi,~]=MSSA_gap_fitting_correct(mssaSort_gap,M_gap,N_gap,...
                     fullfile(ddr1,['MSSA_N' num2str(ss) '_Final']));
-            else
+%             else
 
-                [MSSAn_CGJI_fill_reconst,~,iter_num,chi,~]=MSSA_gap_fitting_correct(mssaSort_gap,M_gap,N_gap);
+%                 [MSSAn_CGJI_fill_reconst,~,iter_num,chi,~]=MSSA_gap_fitting_correct(mssaSort_gap,M_gap,N_gap);
 
-            end
+%             end
+
         else
-            
+
             [MSSAn_CGJI_fill_reconst,~,iter_num,chi,~]=MSSA_gap_fitting_correct(mssaSort_gap,M_gap,N_gap);
         end
         replace_Centers=MSSAn_CGJI_fill_reconst{max(iter_num)+1};

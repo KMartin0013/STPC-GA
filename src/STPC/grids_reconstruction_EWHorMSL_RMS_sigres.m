@@ -1,4 +1,4 @@
-function [mssa_Sort_sigres_sn,mssa_Sort_RMS_sigres_sn] = grids_reconstruction_EWHorMSL_RMS_sigres( ...
+function [mssa_Sort_sigres_sn,mssa_Sort_RMS_sigres_sn,timing] = grids_reconstruction_EWHorMSL_RMS_sigres( ...
     mssa_Sort_sn,intit_num,fill_nmonths,S_rec,r_record, ...
     c11cmn_area,in,BasinArea,S_ol,fill_dates,fitwhat,lonlon)
 % -------------------------------------------------------------------------
@@ -62,6 +62,7 @@ function [mssa_Sort_sigres_sn,mssa_Sort_RMS_sigres_sn] = grids_reconstruction_EW
 %% 1. Signal / residual decomposition and reconstruction (EWH / MASS / MSL)
 
 mssa_Sort_sigres_sn = struct();
+gridTimer = tic;
 for ins = 1:intit_num+1
 
     % Original MSSA reconstruction coefficients
@@ -173,6 +174,9 @@ end
 %% 2. RMS: include all signal / residual related RMS (originally commented)
 
 mssa_Sort_RMS_sigres_sn = struct();
+timing = struct();
+timing.grid_products_seconds = toc(gridTimer);
+rmsTimer = tic;
 
 for ins = 1:intit_num+1
 
@@ -202,28 +206,33 @@ for ins = 1:intit_num+1
         fillM_reconcoffs_both_ins, fill_dates, fitwhat, [], [], [], [], [], []); % mm (kg/m^2 equiv)
     warning on;
 
+    % Cumulative prefix fields must persist across j so that element j
+    % represents the RMS of the first j Slepian modes, not mode j alone.
+    sp_ewh_uptoS        = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+    sp_ewh_uptoS_signal = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+    sp_ewh_uptoS_mssa   = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+    sp_ewh_uptoS_mssa_both = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+    sp_ewh_uptoS_mssa_both_signal = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+    sp_ewh_uptoS_mssa_both_resid  = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+
     for j = 1:S_rec
+        % Per-mode fields must be reset for every j.
         % time x lat x lon
         sp_ewh          = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
         sp_ewh_signal   = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-
-        sp_ewh_uptoS        = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-        sp_ewh_uptoS_signal = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-
-        sp_ewh_uptoS_mssa   = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-
-        sp_ewh_uptoS_mssa_both   = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-        sp_ewh_mssa_both_signal  = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-        sp_ewh_mssa_both_resid   = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-        sp_ewh_uptoS_mssa_both_signal = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-        sp_ewh_uptoS_mssa_both_resid  = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-
-        sp_ewh_mssa_signal   = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
-        sp_ewh_mssa_resid   = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+        sp_ewh_mssa_signal      = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+        sp_ewh_mssa_resid       = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+        sp_ewh_mssa_both_signal = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
+        sp_ewh_mssa_both_resid  = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
 
         r = squeeze(r_record(j,:,:));
 
         for i = 1:fill_nmonths
+            % original EWH (cm) % Bug 1 fixed 2026/4/14
+            sp_ewh(i,:,:) = r * fillM_deltacoffs_ins(i,j)' / 1000 * 100; % Bug 1 fixed 2026/4/14
+
+            % original signal EWH (cm) % Bug 1 fixed 2026/4/14
+            sp_ewh_signal(i,:,:) = r * fillM_signaldelta_ins(i,j)' / 1000 * 100; % Bug 1 fixed: 2026/4/14
 
             % upto-S original and signal
             sp_ewh_uptoS(i,:,:)        = squeeze(sp_ewh_uptoS(i,:,:))       ...
@@ -293,4 +302,5 @@ for ins = 1:intit_num+1
     end
 end
 
+timing.rms_analysis_seconds = toc(rmsTimer);
 end

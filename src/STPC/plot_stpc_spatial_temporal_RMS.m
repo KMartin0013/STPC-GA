@@ -45,8 +45,8 @@ if strcmp(Area,'greenland')
     ybou3 = [50 65];
 elseif strcmp(Area,'SCSpTH')
     ybou1 = [0 25];
-    ybou2 = [0 15];
-    ybou3 = [0 15];
+    ybou2 = [0 25];
+    ybou3 = [0 25];
 elseif strcmp(Area,'yangtze')
     ybou1 = [0 20];
     ybou2 = [0 15];
@@ -85,7 +85,7 @@ for ss = use_ss
                 r_res   = squeeze(EWH_sn.fillM_Grid_STPC);
                 fig_name = 'fillM_EWH_STPC';
             case 4
-                r_res   = squeeze(EWH_sn.fillM_Grid_res_STPC);
+                r_res   = squeeze(EWH_sn.fillM_Grid_sig_STPC);
                 fig_name = 'fillM_EWH_signal_STPC';
             case 5
                 r_res   = squeeze(EWH_sn.fillM_Grid_res_STPC);
@@ -173,7 +173,7 @@ for ss = use_ss
                 r_res   = squeeze(EWH_sn.fillM_Grid_STPC);
                 fig_name = 'fillM_EWH_STPC';
             case 4
-                r_res   = squeeze(EWH_sn.fillM_Grid_res_STPC);
+                r_res   = squeeze(EWH_sn.fillM_Grid_sig_STPC);
                 fig_name = 'fillM_EWH_signal_STPC';
             case 5
                 r_res   = squeeze(EWH_sn.fillM_Grid_res_STPC);

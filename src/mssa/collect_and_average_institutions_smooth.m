@@ -7,6 +7,7 @@ Lwindow      = basicInfo.Lwindow;
 c11cmn       = basicInfo.c11cmn;
 ddir1        = basicInfo.ddir1;      % output results directory (Results_*)
 ddir2        = basicInfo.ddir2;      % output figure directory (Figures_*)
+ddir3        = basicInfo.ddir3;      % output figure directory (Results_*/AddData)
 ifilesRoot   = basicInfo.ifilesRoot; % root directory of original IFILES
 saveAddData  = basicInfo.saveAddData;
 redo         = basicInfo.redo;
@@ -29,7 +30,7 @@ Default_Method = ["None","Gaussian300km","Gaussian500km","DDK3","DDK4",...
 
 matFile1=fullfile(ddir1,['MainMSSA_SMO1_' Attach.Attach_ALL '.mat']);
 
-matFile2=fullfile(ddir1,['MainMSSA_SMO2_' Attach.Attach_ALL '.mat']);
+% matFile2=fullfile(ddir1,['MainMSSA_SMO2_' Attach.Attach_ALL '.mat']);
 
 % redo=false;
 % if ~redo && exist(matFile2,'file')
@@ -355,7 +356,7 @@ for me_seq=1:numel(method_order)
 
     me=method_order(me_seq);
 
-    matFile2_me=fullfile(ddir1,['MainMSSA_SMO2_' char(Default_Method(me)) ...
+    matFile2_me=fullfile(ddir3,['MainMSSA_SMO2_' char(Default_Method(me)) ...
     '_' Attach.Attach_ALL '.mat']);
 
     disp(['Do gap-filling for ', char(Default_Method(me)) ' filter']);

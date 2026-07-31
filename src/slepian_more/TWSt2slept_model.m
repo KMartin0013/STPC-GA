@@ -62,10 +62,15 @@ maxL=max(Lwindow);
 ldim=(Lwindow(2-lp)+1)^2-bp*Lwindow(1)^2;
 defval('J',ldim)
 
-% Where the TWS files are stored
-defval('ddir1',fullfile(getenv('IFILES'),'src','MOD'));
-% Where you would like to save the new .mat file
-defval('ddir2',fullfile(getenv('IFILES'),'src','MOD','SlepianExpansions'));
+% Generated model data and Slepian expansions belong to the writable
+% project data root, not to the source directory.
+projectRoot = getenv('IFILES');
+if isempty(projectRoot)
+    error('STPCGA:ProjectRootNotConfigured', ...
+        'Run startup_STPC_GA before creating simulation models.');
+end
+defval('ddir1',fullfile(projectRoot,'MOD'));
+defval('ddir2',fullfile(projectRoot,'MOD','SlepianExpansions'));
 
 if exist(ddir1, 'dir') ~= 7
     mkdir(ddir1);
@@ -226,6 +231,5 @@ elseif length(Dataproduct)==3
     varns={slepcoffs,thedates,Coeff,TH,G,CC,V,N,Check_board};
 end
 varargout=varns(1:nargout);
-
 
 

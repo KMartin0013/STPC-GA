@@ -122,6 +122,7 @@ d1 = dir(fnpl1);
 d2 = dir(fnpl2);
 
 
+
 % If this file already exists, and it is more new than the source file,
 % then load it.  Otherwise make a new one and return that one. This should
 % automatically make and use a new .mat file if you update the source (TN-13) file.
@@ -133,15 +134,17 @@ if ~(exist(fnpl1,'file')==2)
     else
 
         warning(['No input degree 1 file for %s %s. We will use the averaged degree 1' ...
-            ' files from CSR, JPL and GFZ instead. Press any key to continue.'],Pcenter, Rlevel)
-        pause
+            ' files from CSR, JPL and GFZ instead.'],Pcenter, Rlevel)
     end
 end
+% Refresh file metadata because a marker file may have just been created.
+d1 = dir(fnpl1);
+d2 = dir(fnpl2);
 
 % If this file already exists, and it is more new than the source file,
 % then load it.  Otherwise make a new one and return that one. This should
 % automatically make and use a new .mat file if you update the source (TN-13) file.
-if ~(exist(fnpl2,'file')==2) || datenum(d1.date) > datenum(d2.date)
+if ~(exist(fnpl2,'file')==2) || isempty(d1) || datenum(d1.date) > datenum(d2.date)
     % Here create a new save file to use.
     % This is reversed from our typical if, exist, load convention because
     % this way if the file does not exist it will skip the second if

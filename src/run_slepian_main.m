@@ -78,7 +78,7 @@ function slepian_results = run_slepian_main(basicInfo, slepianInfo, ...
 
     buffer_deg        = slepianInfo.buffer_deg
     buffer_str        = slepianInfo.buffer_str;
-    S_choice          = slepianInfo.S_choice;
+    S_selection       = slepianInfo.S_selection;
     Radius            = slepianInfo.Radius;
     phi               = slepianInfo.phi;
     theta             = slepianInfo.theta;
@@ -90,6 +90,9 @@ function slepian_results = run_slepian_main(basicInfo, slepianInfo, ...
     % ---------------------------------------------------------------
     [FIG_Attach, fnpl_IB] = build_name_tags_and_ib_path( ...
         Dataproduct, Lwindow, buffer_str, ifilesRoot);
+    if isfield(basicInfo, 'note')
+        FIG_Attach = [FIG_Attach stpc_note_suffix(basicInfo.note)];
+    end
 
     [XY_buffer, BasinArea_buffer, XY_ori, BasinArea_ori, Earth_radius] = ...
         compute_regions(TH_ori, buffer_deg);
@@ -109,7 +112,7 @@ function slepian_results = run_slepian_main(basicInfo, slepianInfo, ...
             Lwindow, phi, theta, omega, ifilesRoot);
 
         [S_shannon, S, S_sig] = ...
-            choose_S_from_eigenvalues(S_choice, Max_S, V, ...
+            choose_S_from_eigenvalues(S_selection, Max_S, V, ...
             Lwindow, XY_buffer);
 
         % ---------------------------------------------------------------
@@ -182,6 +185,7 @@ function slepian_results = run_slepian_main(basicInfo, slepianInfo, ...
         slepian_results.S           = S;
         slepian_results.S_sig       = S_sig;
         slepian_results.S_shannon   = S_shannon;
+        slepian_results.S_selection = S_selection;
         slepian_results.CC          = CC;
         slepian_results.V           = V;
         slepian_results.Radius      = Radius;
@@ -268,78 +272,6 @@ function [data_slepcoffs, data_dates, CC, V, TH_buffer] = ...
     [data_slepcoffs, calerrors, data_dates, TH_buffer, G, CC, V] = ...
         grace2slept_m(Dataproduct, TH_ori, buffer_deg, Lwindow, ...
                       phi, theta, omega, [], 'SD', 1); %#ok<ASGLU>
-end
-
-function [S_shannon, S, S_sig] = ...
-    choose_S_from_eigenvalues(S_choice, Max_S, V, Lwindow, XY_buffer)
-% CHOOSE_S_FROM_EIGENVALUES  Determine S and S_sig from eigenvalue spectrum.
-%
-% Inputs:
-%   S_choice   - integer flag specifying strategy
-%   Max_S      - maximum S when S_choice == 6
-%   V          - eigenvalues of Slepian basis
-%   Lwindow    - maximum spherical harmonic degree
-%   XY_buffer  - buffered region polygon
-%   FIG_Attach - base name tag to be extended
-%
-% Outputs:
-%   S_shannon  - Shannon number
-%   S          - chosen number of Slepian functions
-%   S_sig      - either S or [N1, N2] (for smoothing cases)
-%   FIG_Attach - updated tag including S information
-
-    S_shannon = round((Lwindow + 1)^2 * spharea(XY_buffer));
-    S1 = []; S2 = [];
-
-    switch S_choice
-        case 0
-            % Use Shannon number directly
-            S     = S_shannon;
-            S_sig = S;
-        case 1
-            % Eigenvalues > 0.1
-            S     = sum(V > 0.1);
-            S_sig = S;
-        case 2
-            % Provide [N1, N2] where N1 = Shannon, N2 = V>0.1
-            S  = sum(V > 0.1);
-            S1 = S_shannon;
-            S2 = S;
-            S_sig = [S1, S2];
-        case 3
-            % Smooth all Slepian functions
-            S  = S_shannon;
-            S1 = 0;
-            S2 = S;
-            S_sig = [S1, S2];
-        case 4
-            % Eigenvalues > 0.3
-            S     = sum(V > 0.3);
-            S_sig = S;
-        case 5
-            % Eigenvalues > 0.01
-            S     = sum(V > 0.01);
-            S_sig = S;
-        case 6
-            % Use Max_S as S
-            S     = Max_S;
-            S_sig = S;
-        otherwise
-            warning('Unknown S_choice. Using Shannon number.');
-            S     = S_shannon;
-            S_sig = S;
-    end
-
-    % Extend name tag with S info
-%     if numel(S_sig) > 1
-%         % If you provide two elements in 'S_sig', there should be additional
-%         % Gaussian smoothing on high-order SSF, see Ref2 for details
-%         FIG_Attach = [FIG_Attach '_S' num2str(S_sig(1)) 't' num2str(S_sig(2))];
-%     else
-%         
-%         FIG_Attach = [FIG_Attach '_S' num2str(S)];
-%     end
-
 end
 
 function DateInfo = handle_missing_months(data_dates, Dataproduct)

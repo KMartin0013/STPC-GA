@@ -12,6 +12,10 @@ option_sta=["mean","rms","std","linear"];
 
 % use_S_TP=find(V>0.1 & V<0.9);
 use_S_TP=find(V>threshold_S(1) & V<threshold_S(2));
+if isempty(use_S_TP)
+    error('V3:NoSTurningPointDomain', ...
+        'No Slepian eigenvalues fall inside the configured S_bound.');
+end
 
 used_sta_V=used_sta_SN; % what kind of turning point do you want? (default is RSS)
 MaxNumChanges_V=Turning_number; % how many turning point do you want?
@@ -25,9 +29,17 @@ for i=1:4
 
     leng_V=length(turn_V);
 
+    if leng_V == 0
+        error('V3:NoSTurningPoints', ...
+            ['No S turning point was found. Reduce config.turningNumber ', ...
+             'or adjust config.S_bound.']);
+    end
     if leng_V<MaxNumChanges_V
         turn_V(leng_V+1:MaxNumChanges_V)=turn_V(leng_V);
-        warning('Too many turning points for Slepian.')
+        warning('V3:FewerSTurningPoints', ...
+            ['Only %d distinct S turning points were found; the final ', ...
+             'candidate is repeated to keep turningNumber=%d.'], ...
+            leng_V, MaxNumChanges_V)
     end
 
     turn_V_four(1:length(turn_V),i)=use_S_TP(turn_V);

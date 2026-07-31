@@ -1,17 +1,26 @@
-Required Module: 
-	Name:	DDK software (from strawpants) 
-	Source:	https://github.com/strawpants/GRACE-filter
-	Required Code:
-		/GRACE-filter-master
+STPC-GA external dependencies
+=============================
 
-Required Module: 
-	Name:	Slepian software (from fjsimons) 
-	Source:	https://github.com/csdms-contrib/slepian_alpha
-			https://github.com/csdms-contrib/slepian_bravo
-			https://github.com/csdms-contrib/slepian_delta
-			https://github.com/csdms-contrib/slepian_zero
-	Required Code:
-		/slepian_alpha-master
-		/slepian_bravo-master
-		/slepian_delta-master
-		/slepian_zero-master
+Required Slepian software:
+
+  slepian_alpha-master
+    https://github.com/csdms-contrib/slepian_alpha
+  slepian_bravo-master
+    https://github.com/csdms-contrib/slepian_bravo
+  slepian_delta-master
+    https://github.com/csdms-contrib/slepian_delta
+  slepian_zero-master
+    https://github.com/csdms-contrib/slepian_zero
+
+Optional DDK software:
+
+  GRACE-filter-master
+    https://github.com/strawpants/GRACE-filter
+
+Preferred layout:
+
+  <STPC-GA>/external/<dependency-folder>
+
+Alternative layouts can be passed to startup_STPC_GA as dependencyRoot or
+selected with the STPC_DEPENDENCIES environment variable. Third-party
+source trees are not redistributed in this repository.

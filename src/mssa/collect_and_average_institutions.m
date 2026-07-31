@@ -7,6 +7,7 @@ Lwindow      = basicInfo.Lwindow;
 c11cmn       = basicInfo.c11cmn;
 ddir1        = basicInfo.ddir1;      % output results directory (Results_*)
 ddir2        = basicInfo.ddir2;      % output figure directory (Figures_*)
+ddir3        = basicInfo.ddir3;      % output figure directory (Results_*/AddData)
 ifilesRoot   = basicInfo.ifilesRoot; % root directory of original IFILES
 saveAddData  = basicInfo.saveAddData;
 redo         = basicInfo.redo;
@@ -16,9 +17,9 @@ use_institu  = basicInfo.use_institu;
 intit_num    = length(slepian_results);
 
 
-if ~redo && exist(fullfile(ddir1,['MainMSSA_ADD_' Attach.Attach_ALL '.mat']),'file')
+if ~redo && exist(fullfile(ddir3,['MainMSSA_ADD_' Attach.Attach_ALL '.mat']),'file')
 
-    load(fullfile(ddir1,['MainMSSA_ADD_' Attach.Attach_ALL '.mat']),...
+    load(fullfile(ddir3,['MainMSSA_ADD_' Attach.Attach_ALL '.mat']),...
         'mssaSort','S','S_ol','SHC_degord')
 
     return
@@ -353,7 +354,7 @@ mssaSort(intit_num+1).Fit.data_MASSparamerrors = data_MASSaveparamerrors(2);
 SHC_degord = SHCpotcoffsdelta(1,:,1:2);
 
 if saveAddData
-    save(fullfile(ddir1,['MainMSSA_ADD_' Attach.Attach_ALL '.mat']), ...
+    save(fullfile(ddir3,['MainMSSA_ADD_' Attach.Attach_ALL '.mat']), ...
         'mssaSort','S','S_ol','SHC_degord')
 end
 

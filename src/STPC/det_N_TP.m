@@ -12,6 +12,16 @@ M_rec               = mssa_results.M_rec;
 threshold_N=[N_bou, 1-N_bou];
 
 % for MSSA
+% Lilliefors can legitimately return a p-value outside the tabulated
+% range.  The value is still usable for the later binary significance
+% decision, so silence only these two known boundary notices locally and
+% restore the caller's warning state automatically.
+warningStateLow = warning('query', 'stats:lillietest:OutOfRangePLow');
+warningStateHigh = warning('query', 'stats:lillietest:OutOfRangePHigh');
+warning('off', 'stats:lillietest:OutOfRangePLow');
+warning('off', 'stats:lillietest:OutOfRangePHigh');
+warningCleanup = onCleanup(@() local_restore_lillietest_warnings( ...
+    warningStateLow, warningStateHigh)); %#ok<NASGU>
 
 mssa_Sort_N=mssa_Sort(1:intit_num);
 
@@ -43,6 +53,11 @@ for j=1:size(MSSA_evalues_sumup,2)
 
         use_N_TP=find(MSSA_evalues_sumup(:,j)>threshold_N(1) & ...
             MSSA_evalues_sumup(:,j)<threshold_N(2));
+        if isempty(use_N_TP)
+            error('V3:NoNTurningPointDomain', ...
+                ['No cumulative MSSA eigenvalues for coefficient %d fall ', ...
+                 'inside the configured N_bound.'], j);
+        end
 
         % whole SCS
         [turn_MSSA] = findchangepts(MSSA_evalues_sumup(use_N_TP,j), ...
@@ -50,9 +65,18 @@ for j=1:size(MSSA_evalues_sumup,2)
 
         leng_MSSA=length(turn_MSSA);
 
+        if leng_MSSA == 0
+            error('V3:NoNTurningPoints', ...
+                ['No N turning point was found for coefficient %d. ', ...
+                 'Reduce config.turningNumber or adjust config.N_bound.'], j);
+        end
         if leng_MSSA<MaxNumChanges_MSSA
             turn_MSSA(leng_MSSA+1:MaxNumChanges_MSSA)=turn_MSSA(leng_MSSA);
-            warning('Too many turning points for MSSA.')
+            warning('V3:FewerNTurningPoints', ...
+                ['Only %d distinct N turning points were found for ', ...
+                 'coefficient %d; the final candidate is repeated to ', ...
+                 'keep turningNumber=%d.'], ...
+                leng_MSSA, j, MaxNumChanges_MSSA)
         end
 
         turn_MSSA_four{j}(1:length(turn_MSSA),i)=use_N_TP(turn_MSSA);
@@ -149,4 +173,9 @@ if plotProcess
 
 end
 
+end
+
+function local_restore_lillietest_warnings(warningStateLow, warningStateHigh)
+warning(warningStateLow);
+warning(warningStateHigh);
 end

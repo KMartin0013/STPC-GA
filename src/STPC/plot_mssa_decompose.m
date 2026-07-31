@@ -86,10 +86,10 @@ for i = 1:numel(select_S)
 
     if strcmp(Area,'greenland')
         m_text(tt_lon,90, ...
-            ['\bf (a) Normalized slepian basis ($g_{' num2str(SSF) '}\left(\hat{\mathbf{r}}\right)$)'], ...
+            ['\bf (a) Normalized Slepian basis ($g_{' num2str(SSF) '}\left(\hat{\mathbf{r}}\right)$)'], ...
             'FontWeight','bold','FontSize',font_Size-1,'horizontalalignment','center','Interpreter','latex')
     else
-        title(['\bf (a) Normalized slepian basis ($g_{' num2str(SSF) '}\left(\hat{\mathbf{r}}\right)$)'], ...
+        title(['\bf (a) Normalized Slepian basis ($g_{' num2str(SSF) '}\left(\hat{\mathbf{r}}\right)$)'], ...
             'FontWeight','bold','FontSize',font_Size-1,'Interpreter','latex')
     end
     set(gca,'FontName','Times New Roman','FontSize',font_Size-2,'TickLength',[0.004,0.035]);
@@ -148,7 +148,7 @@ for i = 1:numel(select_S)
     xticks(floor(tt_fil(1)):2:floor(tt_fil(end)))
     xticklabels([]);
 
-    title(['\bf Spherical slepian coefficient ($d_{' num2str(SSF) '}$)'],'Interpreter','latex')
+    title(['\bf Spherical Slepian coefficient ($d_{' num2str(SSF) '}$)'],'Interpreter','latex')
 
     set(gca,'FontName','Times New Roman','FontSize',font_Size-2,'TickLength',[0.004,0.035]);
 
@@ -193,7 +193,7 @@ for i = 1:numel(select_S)
 
     text(0.12,Cap_posiy1,['(' abc(2+Nc_plot+1) ')'],'FontSize',font_Size-1);
 
-    title('Power Spectrum','FontWeight','bold','FontSize',font_Size-1)
+    title('Power spectrum','FontWeight','bold','FontSize',font_Size-1)
     set(gca,'FontName','Times New Roman','FontSize',font_Size-2,'TickLength',[0.007,0.035]);
 
     %% (d) Nc_plot RC time series
