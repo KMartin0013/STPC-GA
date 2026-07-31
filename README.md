@@ -86,21 +86,21 @@ This section is important for interpreting STPC-GA outputs correctly.
 For each spherical Slepian coefficient, MSSA produces a set of reconstructed
 components. Let
 
-- \(X_{\mathrm{MSSA}}\) denote the reconstruction obtained from the available
+- $X_{\mathrm{MSSA}}$ denote the reconstruction obtained from the available
   MSSA components before STPC screening; and
-- \(X_{\mathrm{STPC},p}\) denote the reconstruction obtained from the
+- $X_{\mathrm{STPC},p}$ denote the reconstruction obtained from the
   signal components retained by the STPC screening rule at significance
-  level \(p\).
+  level $p$.
 
 The corresponding removed component is
 
-\[
+$$
 X_{\mathrm{noise},p}
 =
 X_{\mathrm{MSSA}}
 -
 X_{\mathrm{STPC},p}.
-\]
+$$
 
 In the software and output files, this difference is reported as the
 **region-specific noise estimate** or **noise component**.
@@ -141,7 +141,7 @@ result. The manuscript examples use 5%, 10%, and 30% screening levels.
 For optional flood and drought identification, a basin-average,
 detrended-and-deseasonalized TWS series can be compared with thresholds
 derived from the standard deviation of the STPC noise-like time series, for
-example \(3\sigma\).
+example $3\sigma$.
 
 This threshold is an empirical, region-specific detection criterion. Event
 interpretation should be checked against independent observations such as
