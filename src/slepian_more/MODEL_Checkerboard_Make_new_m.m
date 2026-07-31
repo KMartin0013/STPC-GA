@@ -34,7 +34,7 @@ else % Closed coordinates (make a hash)
     h=hash(TH,'sha1');
 end
 
-fn1=fullfile(getenv('IFILES'), 'src','MOD');
+fn1=fullfile(getenv('IFILES'), 'MOD');
 fnmod=sprintf('%s/MODEL-I%sO%sR%s-%s-%i.mat',...
     fn1,Dataproduct{1},Dataproduct{2},Dataproduct{3},h,Lwindow);
 
@@ -44,7 +44,7 @@ end
 
 Earth_radius = fralmanac('a_EGM96','Earth');
 
-run(fullfile(fn1,'Coeff_make.m'))
+run(fullfile(stpc_source_root(),'MOD','Coeff_make.m'))
 
 %% Make simulation
 % c11cmn=[0 89.5 359 -89.5];

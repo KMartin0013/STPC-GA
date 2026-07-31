@@ -8,6 +8,8 @@ use_institu  = basicInfo.use_institu;
 ifilesRoot   = basicInfo.ifilesRoot;
 Institu_ver  = basicInfo.Institu_ver;
 resultDir    = basicInfo.ddir1;
+figureDir    = basicInfo.ddir2;
+
 intit_num    = mssaInfo.intit_num;
 
 % S_bou        = STPCInfo.S_bou;
@@ -17,7 +19,11 @@ intit_num    = mssaInfo.intit_num;
 suffix_area = [Institu_ver(3:4) '_' Area];
 
 suffix_XY_use = [num2str(Lwindow) '_' buffer_str];
-suffix_str    = [suffix_area '_' suffix_XY_use basicInfo.note];
+note_suffix   = '';
+if isfield(basicInfo, 'note')
+    note_suffix = stpc_note_suffix(basicInfo.note);
+end
+suffix_str    = [suffix_area '_' suffix_XY_use note_suffix];
 
 % if S_bou==0 && N_bou==0
 %     suffix_bou = '';
@@ -33,7 +39,8 @@ Attach_ALL = [char(use_institu(intit_num+1)) '_' suffix_str];
 
 % If you still follow the original IFILES/Text_* and Figure_* structure:
 txt_path_ALL = fullfile(ifilesRoot, ['Text_'   Code_Version], Attach_ALL);
-fig_path_ALL = fullfile(ifilesRoot, ['Figure_' Code_Version], Attach_ALL);
+% fig_path_ALL = fullfile(ifilesRoot, ['Figure_' Code_Version], Attach_ALL);
+fig_path_ALL = fullfile(figureDir, Attach_ALL);
 
 Attach_each   = strings(intit_num+1,1);
 txt_path_each = strings(intit_num+1,1);
@@ -43,8 +50,11 @@ for ins = 1:intit_num
     Attach_each(ins)   = string([char(use_institu(ins)) '_' suffix_str]);
     txt_path_each(ins) = string(fullfile(ifilesRoot, ...
         ['Text_'   Code_Version], [char(Attach_each(ins))]));
-    fig_path_each(ins) = string(fullfile(ifilesRoot, ...
-        ['Figure_' Code_Version], [char(Attach_each(ins))]));
+%     fig_path_each(ins) = string(fullfile(ifilesRoot, ...
+%         ['Figure_' Code_Version], [char(Attach_each(ins))]));
+    fig_path_each(ins) = string(fullfile(figureDir, ...
+        [char(Attach_each(ins))]));
+
 end
 
 Attach_each(intit_num+1)   = string(Attach_ALL);

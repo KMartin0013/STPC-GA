@@ -1,0 +1,35 @@
+# MATLAB temporary files
+*.asv
+*.autosave
+README_STPC-GA_revised.md
+
+# External dependencies downloaded by the user
+/external/*
+!/external/README.md
+/src/required_softwares/*
+!/src/required_softwares/required_software_List.txt
+
+# Generated Slepian and rotation caches
+/GLMALPHA/
+/KERNELC/
+/KERNELCP/
+/LEGENDRE/
+/DLMB/
+/DLMLMP/
+/HASHES/
+/LOCALIZE/
+/WIGNER/
+
+# Generated model and transformed-coefficient caches
+/MOD/
+/GRACE/SlepianExpansions/
+
+# Configuration-specific outputs
+/Results_*/
+/Figure_*/
+/Text_*/
+
+# Benchmark and MATLAB session artifacts
+Benchmark_Log.csv
+Benchmark_Log.mat
+*.slxc

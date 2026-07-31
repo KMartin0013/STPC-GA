@@ -98,15 +98,25 @@ fill_months     = slepian_results(1).date.fill_months;
 S_bou           = STPCInfo.S_bou;
 N_bou           = STPCInfo.N_bou;
 p_use           = STPCInfo.p_use;
+S_selection     = STPCInfo.S_selection;
+N_selection     = STPCInfo.N_selection;
+sAdaptive       = strcmp(S_selection.mode, 'stpc');
+nStpc           = strcmp(N_selection.mode, 'stpc');
+nWcorr          = strcmp(N_selection.mode, 'wcorr');
+nAdaptive       = nStpc || nWcorr;
+
+stpcBaseName = ['MainSTPC_V3_' Attach.Attach_ALL];
+datasetsFile = fullfile(ddir1, [stpcBaseName '_datasets.mat']);
+turningPointFile = fullfile(ddir1, [stpcBaseName '_TP.mat']);
 
 %% should we redo?
 
-% redo=true;
-if ~redo && exist(fullfile(ddir1,['MainSTPC_' Attach.Attach_ALL '_datasets.mat']),'file')
+% redo=true; % debug only; keep disabled so config.redo controls cache use.
+if ~redo && exist(datasetsFile,'file')
 
-    load(fullfile(ddir1,['MainSTPC_' Attach.Attach_ALL '_datasets.mat']),...
+    load(datasetsFile, ...
         'STPC_p_results')
-    disp(['STPC: Loading ',fullfile(ddir1,['MainSTPC_' Attach.Attach_ALL '_datasets.mat']) ...
+    disp(['STPC: Loading ', datasetsFile ...
         ' for turning points of S and N.']);
 
     return
@@ -141,54 +151,120 @@ end
 
 disp('==== Do STPC calculation ====');
 
-% redo=true;
-if ~redo && exist(fullfile(ddir1,['MainSTPC_' Attach.Attach_ALL '_TP.mat']),'file')
+% redo=true; % debug only; keep disabled so config.redo controls cache use.
+turningPointTimer = tic;
+if ~redo && exist(turningPointFile,'file')
     % directly load this variables
 
-    disp(['STPC: Loading ',fullfile(ddir1, ['MainSTPC_' Attach.Attach_ALL '_TP.mat']) ...
+    disp(['STPC: Loading ', turningPointFile ...
         ' for turning points of S and N.']);
-    load(fullfile(ddir1,['MainSTPC_' Attach.Attach_ALL '_TP.mat']), ...
+    load(turningPointFile, ...
         'turn_V_four','turn_MSSA_four','MSSA_evalues', 'used_sta_SN');
 
 else
-    option_sta=["mean","rms","std","linear"];
-
     used_sta_SN=4; % what kind of turning point do you want? (default is RSS)
 
 %     plotProcess=true;
     %% 1. Determine turning points of Slepian eigenvalues V
-    [turn_V_four] = det_S_TP(V, Max_S, S_bou, ...
-        Turning_number, used_sta_SN, Attach, plotProcess);
+    if sAdaptive
+        turn_V_four = det_S_TP(V, Max_S, S_bou, ...
+            Turning_number, used_sta_SN, Attach, plotProcess);
+    else
+        turn_V_four = repmat(S, 1, 4);
+    end
 
     %% 2. Determine turning points of MSSA eigenvalues
-    [turn_MSSA_four, MSSA_evalues_sumup, MSSA_evalues] = det_N_TP(mssa_results, ...
-        N_bou, Turning_number, used_sta_SN, Attach, plotProcess);
+    N_selection_diagnostics = struct('mode', N_selection.mode);
+    if nStpc
+        [turn_MSSA_four, MSSA_evalues_sumup, MSSA_evalues] = det_N_TP( ...
+            mssa_results, N_bou, Turning_number, used_sta_SN, Attach, ...
+            plotProcess);
+    elseif nWcorr
+        [turn_MSSA_four, MSSA_evalues_sumup, MSSA_evalues, ...
+            N_selection_diagnostics] = det_N_WCorr( ...
+            mssa_results, N_bou, Turning_number, Attach, plotProcess, ...
+            N_selection);
+    else
+        fixedN = N_selection.value;
+        turn_MSSA_four = cell(1, S_ol);
+        for ss = 1:S_ol
+            turn_MSSA_four{ss} = repmat(fixedN, 1, 4);
+        end
+        MSSA_evalues_sumup = [];
+        MSSA_evalues = [];
+    end
 
     %% 3. Plot MSSA turning points and combined (V + MSSA) figure
-    plot_mssa_evalues_and_turning_points(mssa_results, V, Max_S, S_bou, ...
-        N_bou, turn_V_four, turn_MSSA_four, MSSA_evalues_sumup, ...
-        Turning_number, used_sta_SN, Attach);
+    if plotProcess && sAdaptive && nStpc
+        plot_mssa_evalues_and_turning_points(mssa_results, V, Max_S, S_bou, ...
+            N_bou, turn_V_four, turn_MSSA_four, MSSA_evalues_sumup, ...
+            Turning_number, used_sta_SN, Attach);
+    end
 
-    save(fullfile(ddir1, ['MainSTPC_' Attach.Attach_ALL '_TP.mat']), ...
-        'turn_V_four','turn_MSSA_four','MSSA_evalues', 'used_sta_SN')
+    save(turningPointFile, ...
+        'turn_V_four','turn_MSSA_four','MSSA_evalues', 'used_sta_SN', ...
+        'N_selection_diagnostics')
 
 end
+turningPointSeconds = toc(turningPointTimer);
 
 %% 4. Calculate for different S and N at significance level of p
 
 Square_Seq=cell([]);
 STPC_p_results=struct();
+
+% V3: the full SVD/RC decomposition is independent of p, S candidate and
+% N truncation.  Build it once at the maximum candidate S/N; every p still
+% receives its own significance decision from the cached p-values.
+[decompositionCache, sharedDecompositionSeconds] = ...
+    prepare_stpc_decomposition_cache(mssa_results, turn_V_four, ...
+    turn_MSSA_four, used_sta_SN, Turning_number, p_use(1));
+
+numSCandidates = size(turn_V_four, 1);
+numNCandidates = size(turn_MSSA_four{1}, 1);
+fullGridDiagnostics = plotProcess && sAdaptive && nAdaptive;
+
 for p=1:length(p_use)
 
     Noise_SigLev=p_use(p);
 
-    STPC_p_SN_results = run_stpc_pvalue(basicInfo, mssa_results, ...
-        slepian_results, turn_V_four, turn_MSSA_four, Noise_SigLev, ...
-        Turning_number, MSSA_evalues, used_sta_SN, Attach);
+    if fullGridDiagnostics
+        % Plotting requires all full candidate grids.  Preserve the legacy
+        % diagnostic behavior, but still reuse the shared decomposition.
+        candidateOptions = struct('mode', 'legacy', ...
+            'decompositionCache', decompositionCache, ...
+            'plotCandidateEigenvalues', true, ...
+            'plotSelectedDecomposition', false);
+        [STPC_p_SN_results, ~, candidateTiming] = run_stpc_pvalue( ...
+            basicInfo, mssa_results, slepian_results, turn_V_four, ...
+            turn_MSSA_four, Noise_SigLev, Turning_number, MSSA_evalues, ...
+            used_sta_SN, Attach, candidateOptions);
 
-    RMS_SN_Results = run_stpc_temspa_RMS( ...
-        Turning_number, turn_V_four, turn_MSSA_four, used_sta_SN, ...
-        fill_months, in, c11cmn_area, STPC_p_SN_results);
+        analysisTimer = tic;
+        RMS_SN_Results = run_stpc_temspa_RMS( ...
+            Turning_number, turn_V_four, turn_MSSA_four, used_sta_SN, ...
+            fill_months, in, c11cmn_area, STPC_p_SN_results);
+        candidateTiming.full_rms_analysis_seconds = ...
+            candidateTiming.full_rms_analysis_seconds + toc(analysisTimer);
+    elseif numSCandidates * numNCandidates > 1
+        % A fixed S or fixed N reduces the search to one dimension.  Keep
+        % only the WRMS needed for selection; do not create the legacy
+        % spatial/temporal K-by-K diagnostic figures.
+        screenOptions = struct('mode', 'screen', ...
+            'decompositionCache', decompositionCache, ...
+            'plotCandidateEigenvalues', plotProcess, ...
+            'plotSelectedDecomposition', false);
+        [~, RMS_SN_Results, candidateTiming] = run_stpc_pvalue( ...
+            basicInfo, mssa_results, slepian_results, turn_V_four, ...
+            turn_MSSA_four, Noise_SigLev, Turning_number, MSSA_evalues, ...
+            used_sta_SN, Attach, screenOptions);
+        STPC_p_SN_results = [];
+    else
+        % Both S and N are fixed: no candidate screening is necessary.
+        STPC_p_SN_results = [];
+        RMS_SN_Results = struct('s_ss_nn_rms', nan(5, 1, 1));
+        candidateTiming = local_zero_timing();
+    end
 
     %% determine the finally suitable S and N at significance level of p
 
@@ -196,9 +272,11 @@ for p=1:length(p_use)
     use_rms = RMS_SN_Results.s_ss_nn_rms; % [disp, S, N]
     use_rms_title         = 'WRMS';  % Weighted RMS
 
-    plot_stpc_spatial_temporal_RMS( ...
-        STPC_p_SN_results, Turning_number, Area, XY_ori, XY_buffer, ...
-        lon, lat, Noise_SigLev, use_rms, use_rms_title, Attach)
+    if fullGridDiagnostics
+        plot_stpc_spatial_temporal_RMS( ...
+            STPC_p_SN_results, Turning_number, Area, XY_ori, XY_buffer, ...
+            lon, lat, Noise_SigLev, use_rms, use_rms_title, Attach)
+    end
 
     % which disp_data is interpreted as "signal"
     disp_sn = 3; % 1 for MSSA EWH, 2 for MSSA-detected noise
@@ -208,13 +286,28 @@ for p=1:length(p_use)
     % Return matrix used to determine final S and N
     Square_Seq{p} = squeeze(use_rms(disp_sn, :, :));
 
-    [Max_values,Max_SN]=max(Square_Seq{p},[],'all');
-    
-    [SS,NN] = meshgrid(1:Turning_number,1:Turning_number);
-    p_S(p) = SS (Max_SN);
-    p_N(p) = NN (Max_SN);
+    if numSCandidates * numNCandidates == 1
+        p_S(p) = 1;
+        p_N(p) = 1;
+    else
+        [~, maxLinearIndex] = max(Square_Seq{p}, [], 'all');
+        [p_S(p), p_N(p)] = ind2sub( ...
+            [numSCandidates, numNCandidates], maxLinearIndex);
+    end
 
-    STPC_p_result=STPC_p_SN_results{p_S(p),p_N(p)};
+    % Reconstruct complete three-dimensional products only once after the
+    % winning pair is known.  This also makes the decomposition figure
+    % correspond to the final S/N, rather than the last grid candidate.
+    finalOptions = struct('mode', 'selected', ...
+        'decompositionCache', decompositionCache, ...
+        'selectedSN', [p_S(p), p_N(p)], ...
+        'plotCandidateEigenvalues', false, ...
+        'plotSelectedDecomposition', plotProcess);
+    [selectedResults, ~, finalTiming] = run_stpc_pvalue( ...
+        basicInfo, mssa_results, slepian_results, turn_V_four, ...
+        turn_MSSA_four, Noise_SigLev, Turning_number, MSSA_evalues, ...
+        used_sta_SN, Attach, finalOptions);
+    STPC_p_result = selectedResults{p_S(p),p_N(p)};
     
     STPC_p_results(p).name=[STPC_p_result.name '_p' ...
         num2str(Noise_SigLev*100) '%'];
@@ -249,7 +342,7 @@ for p=1:length(p_use)
     if strcmp(land_or_ocean,'ocean')
 
         % store area-weighted mass-term sea level (cm)
-        STPC_p_results(p).MASS.unit='cm';
+        STPC_p_results(p).MSL.unit='cm';
         STPC_p_results(p).MSL.fillM_Slepian=STPC_p_result.MSL.fillM_Slepian;
         STPC_p_results(p).MSL.fillM_MSSA=STPC_p_result.MSL.fillM_MSSA;
         STPC_p_results(p).MSL.fillM_STPC=STPC_p_result.MSL.fillM_STPC;
@@ -264,9 +357,67 @@ for p=1:length(p_use)
 
     end
 
+    STPC_p_results(p).selected_S_index = p_S(p);
+    STPC_p_results(p).selected_N_index = p_N(p);
+    STPC_p_results(p).selected_S = ...
+        turn_V_four(p_S(p), used_sta_SN);
+    selectedSWithOcean = STPC_p_results(p).selected_S + ...
+        double(strcmp(land_or_ocean, 'ocean'));
+    selectedN = zeros(1, selectedSWithOcean);
+    for ss = 1:selectedSWithOcean
+        selectedN(ss) = turn_MSSA_four{ss}(p_N(p), used_sta_SN);
+    end
+    STPC_p_results(p).selected_N = selectedN;
+    STPC_p_results(p).selection = struct( ...
+        'S', S_selection, 'N', N_selection);
+    STPC_p_results(p).screening_RMS = Square_Seq{p};
+    STPC_p_results(p).timing = local_pack_timing( ...
+        candidateTiming, finalTiming, sharedDecompositionSeconds, ...
+        turningPointSeconds, p);
+
 end
 
-save(fullfile(ddir1,['MainSTPC_' Attach.Attach_ALL '_datasets.mat']), 'STPC_p_results', 'p_S', 'p_N', 'used_sta_SN') 
+save(datasetsFile, 'STPC_p_results', 'p_S', 'p_N', 'used_sta_SN')
 
+end
+
+function timing = local_zero_timing()
+timing = struct( ...
+    'mssa_slice_and_significance_seconds', 0, ...
+    'coefficient_reconstruction_seconds', 0, ...
+    'grid_reconstruction_seconds', 0, ...
+    'screen_rms_analysis_seconds', 0, ...
+    'signal_residual_grid_seconds', 0, ...
+    'full_rms_analysis_seconds', 0);
+end
+
+function timing = local_pack_timing(screen, final, sharedSeconds, ...
+    turningPointSeconds, pIndex)
+timing = struct();
+timing.turning_point_seconds = turningPointSeconds;
+timing.turning_point_charged_to_this_p = ...
+    double(pIndex == 1) * turningPointSeconds;
+timing.shared_decomposition_cache_seconds = sharedSeconds;
+timing.shared_decomposition_charged_to_this_p = double(pIndex == 1) * sharedSeconds;
+timing.screen = screen;
+timing.final = final;
+
+timing.algorithm_seconds = ...
+    timing.turning_point_charged_to_this_p + ...
+    timing.shared_decomposition_charged_to_this_p + ...
+    screen.mssa_slice_and_significance_seconds + ...
+    screen.coefficient_reconstruction_seconds + ...
+    screen.grid_reconstruction_seconds + ...
+    screen.signal_residual_grid_seconds + ...
+    final.mssa_slice_and_significance_seconds + ...
+    final.coefficient_reconstruction_seconds + ...
+    final.grid_reconstruction_seconds + ...
+    final.signal_residual_grid_seconds;
+
+timing.analysis_rms_seconds = ...
+    screen.screen_rms_analysis_seconds + ...
+    screen.full_rms_analysis_seconds + ...
+    final.screen_rms_analysis_seconds + ...
+    final.full_rms_analysis_seconds;
 end
 

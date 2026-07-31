@@ -102,18 +102,26 @@ if redo || ~exist(fullfile(ddir1,['MainMSSA_' Attach.Attach_ALL '.mat']),'file')
         mssaInfo, Attach, plotProcess);
 
     %% 4. Search for optimal M for reconstruction (separation index)
-    if strcmp(M,'Auto')
+    if (ischar(M) || (isstring(M) && isscalar(M))) && ...
+            strcmpi(char(string(M)), 'Auto')
 
         M_rec = det_opt_M(mssa_Sort, mssaInfo, fillM_deltacoffs, ...
             S_ol, S, Attach, plotProcess);
 
-    elseif isinteger(M) && M>0
+    elseif isnumeric(M) && isscalar(M) && isfinite(M) && ...
+            M > 0 && M == fix(M)
 
-        M_rec = M;
+        if M > size(fillM_deltacoffs, 1)
+            error('V3:FixedMOutOfRange', ...
+                ['Requested M=%d exceeds the filled time-series length ', ...
+                 'of %d months.'], M, size(fillM_deltacoffs, 1));
+        end
+        M_rec = double(M);
 
     else
 
-        error('Invalid input of M. Should be specific positive integer or ''Auto''.')
+        error('V3:InvalidM', ...
+            'M must be "STPC" (normalized to "Auto") or a positive integer.')
     end
 
     %%

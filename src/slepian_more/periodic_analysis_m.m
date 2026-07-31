@@ -116,6 +116,20 @@ omega = omega*mu2;
 ESTresid =zeros(size(slept));
 % Initialize the evaluated fitted function set
 ESTsignal=zeros(size(slept));
+uncertainty = struct();
+uncertainty.method = 'OLS covariance with RSS/(n-p) and harmonic delta method';
+uncertainty.amplitude_se = nan(length(omega), j);
+uncertainty.amplitude_unc95 = nan(length(omega), j);
+uncertainty.phase_se = nan(length(omega), j);
+uncertainty.phase_unc95 = nan(length(omega), j);
+uncertainty.phase_unc95_degrees = nan(length(omega), j);
+uncertainty.trend_se_per_year = nan(1, j);
+uncertainty.trend_unc95_per_year = nan(1, j);
+uncertainty.residual_variance = nan(1, j);
+uncertainty.rss = nan(1, j);
+uncertainty.parameter_count = nan(1, j);
+uncertainty.degrees_of_freedom = nan(1, j);
+uncertainty.selected_polynomial_order = nan(1, j);
 % Figure out the orders and degrees of this setup
 % BUT orders and degrees have lost their meaning since slept should
 %  be ordered by eigenvalue
@@ -271,6 +285,13 @@ for index=1:j
     amp=amp1;
     pha=phase1;
     tre=trend1;
+    selectedG = G1;
+    if index == specialterms{1}
+       selectedG = Gspec1;
+    end
+    selectedM = mL2_1;
+    selectedResid = resid1;
+    selectedOrder = 1;
     
     %%%
     % Second order polynomial
@@ -327,6 +348,13 @@ for index=1:j
          amp=amp2;
          pha=phase2;
          tre=trend2;
+         selectedG = G2;
+         if index == specialterms{1}
+            selectedG = Gspec2;
+         end
+         selectedM = mL2_2;
+         selectedResid = resid2;
+         selectedOrder = 2;
 
          if moredates; extravalues(:,index) = extravaluesfn2'; end
       else
@@ -391,6 +419,13 @@ for index=1:j
          amp=amp3;
          pha=phase3;
          tre=trend3;
+         selectedG = G3;
+         if index == specialterms{1}
+            selectedG = Gspec3;
+         end
+         selectedM = mL2_3;
+         selectedResid = resid3;
+         selectedOrder = 3;
 
          if moredates; extravalues(:,index) = extravaluesfn3'; end
       else
@@ -444,14 +479,73 @@ for index=1:j
     % Make the matrix ftests
     ftests(index,:) = [0 P2ftest P3ftest];
 
+    parameter_count = length(selectedM);
+    degrees_of_freedom = length(d) - parameter_count;
+    uncertainty.parameter_count(index) = parameter_count;
+    uncertainty.degrees_of_freedom(index) = degrees_of_freedom;
+    uncertainty.selected_polynomial_order(index) = selectedOrder;
+    uncertainty.rss(index) = sum(selectedResid.^2);
+    if degrees_of_freedom > 0
+        residual_variance = uncertainty.rss(index) / degrees_of_freedom;
+        covariance_matrix = residual_variance * pinv(selectedG' * selectedG);
+        covariance_matrix = (covariance_matrix + covariance_matrix') / 2;
+        tcrit = tinv(0.975, degrees_of_freedom);
+        uncertainty.residual_variance(index) = residual_variance;
+
+        if parameter_count >= 2
+            uncertainty.trend_se_per_year(index) = ...
+                sqrt(max(covariance_matrix(2,2), 0)) / mu2 * 365.25;
+            uncertainty.trend_unc95_per_year(index) = ...
+                tcrit * uncertainty.trend_se_per_year(index);
+        end
+
+        startU = parameter_count - 2*lomega + 1;
+        idxC = startU:(startU + lomega - 1);
+        idxS = (startU + lomega):parameter_count;
+        for harmonic_i = 1:lomega
+            C = selectedM(idxC(harmonic_i));
+            S = selectedM(idxS(harmonic_i));
+            denom = C^2 + S^2;
+            if denom <= 0
+                continue
+            end
+            varC = covariance_matrix(idxC(harmonic_i), idxC(harmonic_i));
+            varS = covariance_matrix(idxS(harmonic_i), idxS(harmonic_i));
+            covCS = covariance_matrix(idxC(harmonic_i), idxS(harmonic_i));
+            varA = (C^2*varC + S^2*varS + 2*C*S*covCS) / denom;
+            varPhi = (S^2*varC + C^2*varS - 2*C*S*covCS) / denom^2;
+            uncertainty.amplitude_se(harmonic_i,index) = sqrt(max(varA, 0));
+            uncertainty.amplitude_unc95(harmonic_i,index) = ...
+                tcrit * uncertainty.amplitude_se(harmonic_i,index);
+            uncertainty.phase_se(harmonic_i,index) = sqrt(max(varPhi, 0));
+            uncertainty.phase_unc95(harmonic_i,index) = ...
+                tcrit * uncertainty.phase_se(harmonic_i,index);
+            uncertainty.phase_unc95_degrees(harmonic_i,index) = ...
+                uncertainty.phase_unc95(harmonic_i,index) * 180/pi;
+        end
+    end
+
     amplitude(:,index)=amp;
     phase(:,index)=wrapToPi(pha-2*pi./[fitwhat(2:end)]'*mu1);
-    trend(:,index)=tre*mu2;
+    trend(:,index)=tre / mu2;
 end
 
 
 % Collect output
-varns={ESTsignal,ESTresid,ftests,extravalues,amplitude,phase,trend};
+uncertainty.amplitude = amplitude;
+uncertainty.phase_degrees = mod((pi/2 - phase) * 180/pi, 360);
+uncertainty.amplitude_ci95 = nan(size(amplitude,1), 2, size(amplitude,2));
+uncertainty.phase_degrees_ci95 = nan(size(phase,1), 2, size(phase,2));
+for uncertainty_index = 1:size(amplitude,2)
+    uncertainty.amplitude_ci95(:,:,uncertainty_index) = ...
+        [amplitude(:,uncertainty_index) - uncertainty.amplitude_unc95(:,uncertainty_index), ...
+        amplitude(:,uncertainty_index) + uncertainty.amplitude_unc95(:,uncertainty_index)];
+    uncertainty.phase_degrees_ci95(:,:,uncertainty_index) = ...
+        [uncertainty.phase_degrees(:,uncertainty_index) - uncertainty.phase_unc95_degrees(:,uncertainty_index), ...
+        uncertainty.phase_degrees(:,uncertainty_index) + uncertainty.phase_unc95_degrees(:,uncertainty_index)];
+end
+uncertainty.phase_circular_std = uncertainty.phase_se * 180/pi;
+varns={ESTsignal,ESTresid,ftests,extravalues,amplitude,phase,trend,uncertainty};
 
 
 varargout=varns(1:nargout);

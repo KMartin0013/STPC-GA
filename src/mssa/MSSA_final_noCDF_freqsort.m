@@ -18,7 +18,6 @@ function varargout = MSSA_final_noCDF_freqsort(mssa_Sort,mssa_TS,Mnum,Nc,fig_not
 % MSSA usage for multiple institutions
 %[mssa_TS_reconst,MSSAf_RC,MSSAf_evalues,RCTest]=MSSA_gap_fitting(A5_CJGI_Sort,mssa_TS,M,Mnum,fig_note);
 
-addpath(fullfile(getenv('IFILES'),'MSSA'))
 % M=numel(tt_EST)/2;
 Method=2;
 % Mnum=8;                    % we want 8 RC
@@ -48,7 +47,15 @@ data_year_beg=mssa_Sort.data_year_beg;
 
 tt_fil=floor(fill_months/12)+data_year_beg+mod(fill_months,12)/12-1/24;
 
-[MSSAf_evalues,MSSAf_st_eofs,MSSAf_st_pcs,MSSAf_RC]=MSSA(tt_fil,mssa_TS,Mnum,Method,Nc);
+% [MSSAf_evalues,MSSAf_st_eofs,MSSAf_st_pcs,MSSAf_RC]=MSSA(tt_fil,mssa_TS,Mnum,Method,Nc);
+
+opts = struct();
+opts.useSvds = true;
+opts.returnFullEvalues = true;
+opts.verbose = false;
+
+[MSSAf_evalues,MSSAf_st_eofs,MSSAf_st_pcs,MSSAf_RC] = ...
+    MSSA_fast(tt_fil,mssa_TS,Mnum,Method,Nc,opts);
 
 mssa_TS_reconst=squeeze(sum(MSSAf_RC,2));
 

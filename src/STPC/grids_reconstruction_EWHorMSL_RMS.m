@@ -45,6 +45,8 @@ for ins = 1:intit_num+1
     fillM_reconcoffs_ins      = mssa_Sort_coff_sn(ins).fillM_reconcoffs;
     fillM_reconcoffs_both_ins = mssa_Sort_coff_sn(ins).fillM_reconcoffs_both;
 
+    % These fields are intentionally per-mode (their names do not contain
+    % "uptoS"), so the work arrays must be reset for every j.
     for j = 1:S_rec
         sp_ewh          = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));
         sp_ewh_mssa     = zeros(fill_nmonths,size(lonlon,1),size(lonlon,2));

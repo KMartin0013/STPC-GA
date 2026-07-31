@@ -19,7 +19,7 @@ function varargout = MSSA_gap_fitting_correct(mssa_Sort,M,N,fig_note)
 % MSSA usage for multiple institutions
 %[MSSAn_Total_CGJI_EST_reconst,MSSAn_RC,iter_num,chi,RCtest]=MSSA_gap_fitting(A5_CJGI_Sort,M,Mnum,fig_note);
 
-addpath(fullfile(getenv('IFILES'),'MSSA'))
+addpath(fileparts(mfilename('fullpath')))
 % M=numel(tt_EST)/2;
 Method=2;
 % Mnum=8;                    % we want 8 RC
@@ -44,7 +44,14 @@ time_num=size(MSLA1_CJGI,1);
 fill_months=1:time_num;
 data_year_beg=mssa_Sort.data_year_beg;
 
-[MSSA1_evalues,MSSA1_st_eofs,MSSA1_st_pcs,MSSA1_RC]=MSSA(1:time_num,MSLA1_CJGI,M,Method,N);
+% [MSSA1_evalues,MSSA1_st_eofs,MSSA1_st_pcs,MSSA1_RC]=MSSA(1:time_num,MSLA1_CJGI,M,Method,N);
+
+opts = struct();
+opts.useSvds = true;
+opts.returnFullEvalues = false;
+opts.verbose = false;
+
+[MSSA1_evalues,MSSA1_st_eofs,MSSA1_st_pcs,MSSA1_RC]=MSSA_fast(1:time_num,MSLA1_CJGI,M,Method,N, opts);
 
 MSSA1_CJGIave=sum(sum(MSSA1_RC,3),2)/intit_num;
 
@@ -56,7 +63,8 @@ font_Size=18;
 F_gap=[.07 .03];F_marg_h=[.09 .04];F_marg_w=[.04 .02];
 F_Position=[100,50,1500,900];
 MarkSize=2;
-col_gap=[0 205 205]/255;col_est=[153 204 255]/255;col_out=[128 0 128]/255;
+col_gap=[150 150 150]/255;
+col_est=[153 204 255]/255;col_out=[128 0 128]/255;
 col_art=[238 173 14]/255;
 abc='abcdefghijklmnopqrstuvwxyz';
 
@@ -96,7 +104,7 @@ for i=1:intit_num
         Cap_posix1=tt_use(5);Cap_posiy1=ybou1(2)-(ybou1(2)-ybou1(1))/10;
         Cap_posix2=tt_use(5);Cap_posiy2=ybou2(2)-(ybou2(2)-ybou2(1))/10;
 
-        % plot the standard deviations of mean values for four institutions
+        % plot the standard deviations of mean values for the active centers
         baseline=ybou1(2);
 
         he_std=area(tt_fil,[MSSA1_CJGIave-3*std_MSSA1 6*std_MSSA1*ones(numel(tt_fil),1)],baseline);
@@ -171,7 +179,7 @@ for i=1:intit_num
         if ischar(mssa_Sort(i).MSSA_TS_order)
             title([mssa_Sort(i).name(1:end-4) ' inverted barometer'],'FontWeight','bold')
         else
-            title([mssa_Sort(i).name(1:end-4) ' spherical slepian coefficient (\alpha = ' num2str(mssa_Sort(i).MSSA_TS_order) ')'],'FontWeight','bold')
+            title([mssa_Sort(i).name(1:end-4) ' spherical Slepian coefficient (\alpha = ' num2str(mssa_Sort(i).MSSA_TS_order) ')'],'FontWeight','bold')
         end
 %         title(['Slepian expansion coefficient (' A5_CJGI_Sort(i).name(1:end-4) ')'],'FontWeight','bold')
 
@@ -181,6 +189,7 @@ for i=1:intit_num
 %         ylabel('Mass sea level (cm)','FontWeight','bold','FontSize',font_Size)
         %     end
 
+        ylabel('(cm)')
         xlim([tt_fil(1)-0.5, tt_fil(end)+0.5])
         ylim(ybou1)
         xticks(floor(tt_fil(1)):1:floor(tt_fil(end)))
@@ -195,10 +204,10 @@ end
 if fig
 
     if exist('he_out','var')
-        l1=legend([p1,p2,p3,he_gap,he_out],{'Raw data','Fit data','1st M-SSA average', ...
+        l1=legend([p1,p2,p3,he_gap,he_out],{'Raw data','Fit data','1st MSSA average', ...
             'GRACE gaps','Outliers'},'NumColumns',5)
     else
-        l1=legend([p1,p2,p3,he_gap],{'Raw data','Fit data','1st M-SSA data','GRACE gaps',},'NumColumns',4)
+        l1=legend([p1,p2,p3,he_gap],{'Raw data','Fit data','1st MSSA data','GRACE gaps',},'NumColumns',4)
     end
 
     set(l1,'Position',[0.25,0.02,0.5,0.03],'box','off','fontsize',font_Size)
@@ -230,7 +239,14 @@ for ii=1:100
 
     MSLAn_CJGI=MSSAn_Total_CGJI_fill_reconst{ii};
 
-    [MSSAn_evalues,MSSAn_st_eofs,MSSAn_st_pcs,MSSAn_RC]=MSSA(tt_fil,MSLAn_CJGI,M,Method,N);
+%     [MSSAn_evalues,MSSAn_st_eofs,MSSAn_st_pcs,MSSAn_RC]=MSSA(tt_fil,MSLAn_CJGI,M,Method,N);
+
+    opts = struct();
+    opts.useSvds = true;
+    opts.returnFullEvalues = false;
+    opts.verbose = false;
+
+    [MSSAn_evalues,MSSAn_st_eofs,MSSAn_st_pcs,MSSAn_RC]=MSSA_fast(tt_fil,MSLAn_CJGI,M,Method,N, opts);
 
     MSLAn_CJGI_reconst=squeeze(sum(MSSAn_RC,2));
 
@@ -319,7 +335,8 @@ end
 
 %% PLOT
 % col_gap=[255 99 71]/255;col_est=[153 204 255]/255;col_out=[128 0 128]/255;
-col_gap=[0 205 205]/255;col_est=[153 204 255]/255;col_out=[128 0 128]/255;
+col_gap=[150 150 150]/255;
+col_est=[153 204 255]/255;col_out=[128 0 128]/255;
 col_art=[238 173 14]/255;
 
 % map_color=mymap("rainbow");
@@ -363,10 +380,13 @@ if fig
         Cap_posix2=tt_use(5);Cap_posiy2=ybou2(2)-(ybou2(2)-ybou2(1))/10;
 
         colormap(ha(i),map_colori)
-%         colorbar('Ticks',linspace(0,1,iter_num(i)),...
-%             'TickLabels',TickLabels_c)
-        colorbar('Ticks',1/iter_num(i)/2:1/iter_num(i):1,...
-            'TickLabels',TickLabels_c)
+        if iter_num(i)<=5
+            colorbar('Ticks',linspace(0,1,iter_num(i)),...
+                'TickLabels',TickLabels_c)
+        else
+            colorbar('Ticks',1/iter_num(i)/2:1/iter_num(i)*5:1,...
+                'TickLabels',TickLabels_c(1:5:end))
+        end
 
         for j=1:numel(tt_lea)
             leak_tt_neibour=[tt_lea(j)-1/24,tt_lea(j),tt_lea(j)+1/24];
@@ -392,6 +412,7 @@ if fig
 
         text(Cap_posix1,Cap_posiy1,['(' abc(i) ') The number of iteration: ' num2str(iter_num(i)-1)],'FontSize',font_Size-1);
 
+        ylabel('(cm)')
         xlim([tt_fil(1)-0.5, tt_fil(end)+0.5])
         ylim(ybou1)
         xticks(floor(tt_fil(1)):1:floor(tt_fil(end)))
@@ -400,7 +421,7 @@ if fig
         if ischar(mssa_Sort(i).MSSA_TS_order)
             title([mssa_Sort(i).name(1:end-4) ' inverted barometer'],'FontWeight','bold')
         else
-            title([mssa_Sort(i).name(1:end-4) ' spherical slepian coefficient (\alpha = ' num2str(mssa_Sort(i).MSSA_TS_order) ')'],'FontWeight','bold')
+            title([mssa_Sort(i).name(1:end-4) ' spherical Slepian coefficient (\alpha = ' num2str(mssa_Sort(i).MSSA_TS_order) ')'],'FontWeight','bold')
         end
 %         title(['Slepian expansion coefficient (' A5_CJGI_Sort(i).name(1:end-4) ')'],'FontWeight','bold')
 

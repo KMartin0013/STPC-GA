@@ -4,6 +4,12 @@ function basicInfo = prepare_basic_info(codeVersion, config)
 % Usage:
 %   basicInfo = prepare_basic_info(codeVersion, config)
 
+    config = stpc_configure_center_list(config);
+    if ~isfield(config, 'note')
+        config.note = '';
+    end
+    config.note = stpc_note_suffix(config.note);
+
     basicInfo = struct();
     basicInfo.Code_Version  = codeVersion;
     basicInfo.TH_ori        = config.TH_ori;
@@ -14,6 +20,11 @@ function basicInfo = prepare_basic_info(codeVersion, config)
     basicInfo.Max_S         = config.Max_S;
     basicInfo.ddir1         = config.resultDir;
     basicInfo.ddir2         = config.figureDir;
+    basicInfo.ddir3         = config.AddresultDir;
+    basicInfo.resultRoot    = config.resultRoot;
+    basicInfo.sharedResultDir = config.sharedResultDir;
+    basicInfo.figureRoot    = config.figureRoot;
+    basicInfo.caseName      = config.caseName;
     basicInfo.ifilesRoot    = config.ifilesRoot;
     basicInfo.redo          = config.redo;
     basicInfo.plotProcess   = config.plotProcess;
@@ -25,5 +36,8 @@ function basicInfo = prepare_basic_info(codeVersion, config)
     basicInfo.GIA           = config.GIA;
     basicInfo.Institu_ver   = config.Institu_ver;
     basicInfo.use_institu   = config.use_institu;
+    basicInfo.center_list   = config.center_list;
+    basicInfo.ensInstitu    = config.ensInstitu;
+    basicInfo.v3Selection   = config.v3Selection;
 
 end
