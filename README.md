@@ -20,9 +20,7 @@ The workflow combines three sequential components:
    statistical significance level.
 
 STPC-GA is intended as a regional GRACE/GRACE-FO processing toolbox. It
-reduces leakage and excessive smoothing within the original SHC bandwidth;
-it does **not** increase the intrinsic spatial resolution of the input
-GRACE/GRACE-FO products.
+reduces leakage and excessive smoothing within the original SHC bandwidth.
 
 ---
 
